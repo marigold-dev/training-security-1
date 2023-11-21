@@ -1,0 +1,22 @@
+export type storage = tez;
+
+type ret = [list<operation>, storage];
+
+// Three entrypoints
+
+@entry
+const increment = (delta: tez, store: storage): ret => [list([]), store + delta];
+
+@entry
+const decrement = (delta: tez, store: storage): ret =>
+  [
+    list([]),
+    match(store - delta) {
+      when (None()):
+        store
+      when (Some(diff)):
+        diff
+    }
+  ];
+
+@entry const reset = (_p: unit, _s: storage): ret => [list([]), 0mutez]
