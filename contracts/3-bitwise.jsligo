@@ -1,0 +1,17 @@
+export type storage = nat;
+
+type ret = [list<operation>, storage];
+
+// Three entrypoints
+
+@entry
+const bitwiseLeftNat = (shiftQty: nat, s: storage): ret => {
+  let r: nat = s << shiftQty;
+  return [list([]), r];
+}
+
+@entry
+const bitwiseRightNat = (shiftQty: nat, s: storage): ret => {
+  let r: nat = s >> shiftQty;
+  return [list([]), r];
+}

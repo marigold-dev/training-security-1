@@ -53,44 +53,150 @@ Underflowing subtraction of 0 tez and 0.000001 tez
 
 2. Rounding issues
 
-https://opentezos.com/smart-contracts/avoiding-flaws/#9-contract-failures-due-to-rounding-issues
+Michelson does not support floats, and so some rounding issues after a division can happen if it is not done carefully. This can cause a smartcontract to halt in some situation.
+
+Lets' take an example about the division of 101 by 4. We have 2 users that would like to redeem the contract balance 3/4 for user A and 1/4 for user B
+
+Run the follow code
+
+```bash
+taq compile 2-rounding.jsligo
+taq simulate 2-rounding.tz --param 2-rounding.parameter.default_parameter.tz
+```
+
+It will fail has the result will be negative, Alice will have 101-25=76 and Bob 101-(3\*25)=26 , so th total to redeem is 102 greater than initial 101
+
+```logs
+script reached FAILWITH instruction
+with "It is a failure !!!"
+```
+
+&rarr; **SOLUTION** : Change the way to do the operation to not be influenced byt the rounding effect. Calculate the first value and the the rest for the second user
+
+Change the line for bob
+
+From
+
+```ligolang
+const bob = s - (3n * quotient);
+```
+
+To
+
+```ligolang
+const bob = s - alice;
+```
+
+Re-Compile-Run the code
+
+```bash
+taq compile 2-rounding.jsligo
+taq simulate 2-rounding.tz --param 2-rounding.parameter.default_parameter.tz
+```
+
+All good now =)
 
 3. Unsecure bitwise operations
 
-like for Bitwise.shift_right or Bitwise.shift_left , it will raise Michelson error if oveflow is reached
+A bitwise operation is a type of computation that operates on the individual bits of a binary number. A bitwise shift moves the bits of the operand to the left or right by a certain number of positions, filling the vacated bits with zeros.
 
-&rarr; solution : do lot of checks on the code or leave default behavior if the consequence is not important
+However, there is a caveat: if the shift amount is too large, it can cause an overflow, which means that some bits are lost or added beyond the expected size of the input. This can lead to unexpected results or errors in the execution of the contract in Michelson
 
-4. Sender vs source confusion
+Run our two example shifting to left and right
 
-&rarr; think twice about potential use case of your endpoint
+```bash
+taq compile 3-bitwise.jsligo
+taq simulate 3-bitwise.tz --param 3-bitwise.parameter.shiftLeftOneNat.tz
+taq simulate 3-bitwise.tz --param 3-bitwise.parameter.shiftRight257times.tz
+```
+
+- First example shifts 2n (0x0010) one time to the left, so it gaves 4n (0x0100)
+- Second example shifts 2n (0x0010) 257 times to the right, as the limit is 256 shifts, it produces an error `unexpected arithmetic overflow`
+
+&rarr; **SOLUTION** : To avoid this, one should always check the size of the input and the shift amount before applying the Bitwise instructions. Here you should check if the number of shift is <= to 256, otherwise you raise an error
+
+4. Sender vs Source confusion
+
+When a transaction is sent by a user, it can create other transactions on other smartcontracts. Depending on the transaction, the original sender address could be different from the direct sender of the transaction.
+
+```mermaid
+sequenceDiagram
+  Note left of User: I am the source of tx1 and tx2
+  User->>SmartContract1: transaction tx1
+  Note right of SmartContract1: I am the sender of tx2
+  SmartContract1->>SmartContract2: transaction tx2
+```
+
+On this example, from transaction tx2 on SmartContract2 has :
+
+- the **User** as the source
+- the **SmartContract1** as the sender
+
+* Man-in-the-middle attack : The victim contract is checking the source `Tezos.get_source()` to give access to an endpoint. If we have a phishing contract in the middle, it can grap even some money additionally to do any malicious action
+
+Run the following test
+
+```bash
+taq test 4-manInTheMiddleTest.jsligo
+```
+
+```logs
+"Sucessfully hacked the victim and grab it money !!!"
+🎉 All tests passed 🎉
+```
+
+&rarr; **SOLUTION** : Fix the code on the file `4-manInTheMiddleVictim.jsligo`, replacing `Tezos.get_source()` by `Tezos.get_sender()`
+
+Run it again
+
+```bash
+taq test 4-manInTheMiddleTest.jsligo
+```
+
+```logs
+Failwith: "You are not the admin to do this action"
+```
+
+> Note : On some specific cases it is important to authorize an intermediary contract to communicate with our contract. We should not always check the source as the default behavior for rejection
 
 5. Library updates
 
-//TODO example of devops issue
+This is a devops issue. If a CI recompiles the code before deploying a new version and there are dependencies to fetch, maybe the new behavior will not be compatible with your code logic and bring new security flaws
 
-&rarr; do more unit tests and CI reports
+&rarr; **SOLUTION** : Do more unit tests and publish CI test reports
 
 6. Private data
 
-any secret value can be read
+One of the most important security considerations for smart contract developers is to avoid storing any sensitive or confidential information on the contract storage. This is because the contract storage is public and immutable, meaning that anyone can read its contents and it cannot be erased or modified. Therefore, any secret value, such as a private key, a password,or a personal identification number, should never be stored on the contract storage. Doing so would expose the secret value to potential attackers and compromise the security and privacy of the contract and its users. .
 
-&rarr; don't store secret or encrypt it and reveal it later
+&rarr; **SOLUTION** : Instead, secret values should be stored off-chain, such as in a secure database or a hardware wallet, and only communicated to the contract when necessary using encryption with Commit&Reveal pattern or zero-knowledge proofs.
 
-7. Predictable information used as random seed
+7. Predictable information used as a random value
 
-&rarr; solution :
+Due to the deterministic nature of blockchain execution, it is not possible to generate random numbers or values within a smart contract. This means that any logic that relies on randomness, such as games, lotteries, or auctions, cannot be implemented securely and fairly on a blockchain. Therefore, smart contract developers need to find alternative ways to introduce randomness into their applications, such as using external sources of randomness (oracles) or cryptographic techniques (commit-reveal schemes).
 
-- use block timestamp. Can be predictable as it is in seconds and we know the block time more or less
-- use contract origination address : it is composed of hash of operation + origination index
+&rarr; **SOLUTION** :
 
-&rarr; solution :
-
-- ask independant participat to submit a random number. A bit painful as it require to do commit/reveal and a way to unlock a locked situation
-- good randomness Oracle. It is, in theory, possible to create a good off-chain random Oracle. Chainlink offers a randomness Oracle based on a verifiable random function (VRF), and may be one of the few, if not the only reasonably good available randomness Oracle but not available on Tezos
+- use block timestamp : This approach has a low cost but also a high risk of being compromised, as the time parameter is too coarse and can be easily estimated based on the average block time
+- use contract origination address : This approach has a low cost but also a high risk of being compromised, as it is composed of hash of operation concatenated with an origination index
+- multi participant random seed : One possible way to generate a multi participant random seed is to ask each participant to submit a random number in a secure and verifiable way. This can be done using a commit-reveal scheme, where each participant first commits to their number by sending a hash of it, and then reveals it later by sending the actual number. The hash function ensures that the participants cannot change their numbers after committing, and the reveal phase allows everyone to verify that the numbers match the hashes. The final seed can be computed by combining all the revealed numbers using some deterministic function, such as XOR or modular addition.
+  However, this method has some drawbacks, such as requiring two rounds of communication and being vulnerable to a locked situation, where some participants do not reveal their numbers and prevent the seed from being generated. To avoid this, there should be some incentive mechanism or timeout mechanism to ensure that everyone reveals their numbers in time, or else they are penalized or excluded from the seed generation.
+- good randomness Oracle : Creating a good off-chain random Oracle is not easy, as it requires a way to prove that the numbers are indeed random and not manipulated by anyone. One possible solution is to use a verifiable random function (VRF), which is a cryptographic algorithm that generates a random output from an input and a secret key, and also produces a proof that the output was correctly computed. The proof can be verified by anyone who knows the input and the public key, but not the secret key. Chainlink is a decentralized network of Oracles that offers a VRF-based randomness Oracle for smart contracts. It claims to be one of the few, if not the only reasonably good available randomness Oracle in the market. However, it has some limitations, such as being only compatible with Ethereum and not with Tezos, which is another popular smart contract platform. Moreover, it still relies on the trustworthiness of a third party, namely the Chainlink node operators who hold the secret keys and generate the random numbers and proofs.
 
 8. Blocked state
 
-leave the contract blocked on a state waiting for a user action. Ex : Shifumi game based on 10min timout to cliam a victory in case of opponent unfair behavior to not play
+One of the possible scenarios in a blockchain smart contract is to have a blocked state, where the contract execution is paused until a certain condition is met by one of the participants. For example, a contract that implements a simple escrow service might have a blocked state where the seller has to confirm the delivery of the goods before the buyer can release the payment. This way, the contract ensures that both parties are satisfied with the transaction and no one can cheat or withdraw from the agreement.
 
-&rarr; solution : Always have a way to unlock a situation, setting an admin control or timestamp based resolution
+Another example is in this Shifumi game (https://github.com/marigold-dev/training-dapp-shifumi), the contract can be blocked if one of the players does not reveal their choice within 10 minutes. In this case, the other player can claim a resolution and win the game by calling a function on the contract. This way, the contract is not stuck indefinitely and the honest player is rewarded.
+
+&rarr; **SOLUTION** :
+
+- Define clear and objective rules for entering and exiting the blocked state, as well as for handling exceptions and disputes.
+- Use timeouts or deadlines to limit the duration of the blocked state and avoid indefinite waiting or deadlock situations.
+- Implement incentives or penalties to encourage or discourage certain behaviors or actions by the participants during the blocked state.
+- Provide feedback and notifications to the participants about the status and progress of the contract during the blocked state.
+- Use external oracles or trusted third parties to verify or arbitrate the condition that triggers the blocked state, if necessary.
+
+---
+
+Go to Part 2: Leaks

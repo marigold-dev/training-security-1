@@ -1,0 +1,8 @@
+#import "3-bitwise.jsligo" "Contract"
+
+// When this file was created, the smart contract was defined with an entrypoint using `@entry` that was not within a namespace. As such, the examples below are written with that assumption in mind.
+// IMPORTANT: We suggest always explicitly typing your parameter values:
+
+const shiftLeftOneNat: parameter_of Contract = BitwiseLeftNat(1n);
+
+const shiftRight257times: parameter_of Contract = BitwiseRightNat(257n);

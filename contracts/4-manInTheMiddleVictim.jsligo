@@ -1,0 +1,24 @@
+export type storage = address;
+
+type ret = [list<operation>, storage];
+
+@entry const otherEntry = (_: unit, s: storage): ret => [list([]), s];
+
+@entry
+const callAdminEntrypoint = (_: unit, s: storage): ret => {
+  if (Tezos.get_source() == s) return [
+    list(
+      [
+        Tezos.transaction(
+          unit,
+          1mutez,
+          Tezos.get_contract_with_error(
+            Tezos.get_sender(),
+            "Cannot get sender contract"
+          )
+        )
+      ]
+    ),
+    s
+  ]; else failwith("You are not the admin to do this action")
+};

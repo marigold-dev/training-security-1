@@ -1,0 +1,16 @@
+export type storage = address;
+
+type ret = [list<operation>, storage];
+
+@entry const @default = (_: unit, s: storage): ret => [list([]), s];
+
+@entry
+const callAdminEntrypoint = (_: unit, s: storage): ret => {
+  const op =
+    Tezos.transaction(
+      unit,
+      0mutez,
+      Tezos.get_entrypoint("%callAdminEntrypoint", s)
+    );
+  return [list([op]), s];
+};

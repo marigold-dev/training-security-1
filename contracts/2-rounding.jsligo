@@ -1,0 +1,19 @@
+export type storage = nat;
+
+@entry
+const redeemBalanceToUsers = (_p: unit, s: storage): [list<operation>, storage] => {
+  const quarter: option<[nat, nat]> = ediv(s, 4n);
+  return match(quarter) {
+    when (Some([quotient, _remainder])):
+      do {
+        const alice = s - quotient;
+        const bob = s - (3n * quotient);
+        return [
+          list([]),
+          (s - alice - bob) == 0 ? 0n : failwith("It is a failure !!!")
+        ];
+      }
+    when (None()):
+      failwith("Division is 0")
+  }
+}

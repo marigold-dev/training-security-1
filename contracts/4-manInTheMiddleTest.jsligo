@@ -1,0 +1,69 @@
+#import "./4-manInTheMiddleVictim.jsligo" "Victim"
+
+#import "./4-manInTheMiddle.jsligo" "MITM"
+
+// reset state
+
+const _ = Test.reset_state(2 as nat, list([]) as list<tez>);
+
+const baker = Test.nth_bootstrap_account(0);
+
+const sender1: address = Test.nth_bootstrap_account(1);
+
+const _4 = Test.set_baker(baker);
+
+const _5 = Test.set_source(sender1);
+
+//Victim
+
+const orig = Test.originate(contract_of(Victim), sender1, 10000mutez);
+
+const _6 = Test.log("Victim contract is ");
+
+const _7 = Test.log(orig.addr);
+
+//Attacker
+
+export const initial_storage: MITM.storage = Test.to_address(orig.addr);
+
+const origMITM = Test.originate(contract_of(MITM), initial_storage, 0mutez);
+
+const _8 = Test.log("Attacker contract is ");
+
+const _9 = Test.log(origMITM.addr);
+
+//functions
+
+export const _call = (): unit => {
+  Test.log("MITM contract has balance : ");
+  Test.log(Test.get_balance(origMITM.addr));
+  const status: test_exec_result =
+    Test.transfer_to_contract(
+      Test.to_entrypoint("callAdminEntrypoint", origMITM.addr),
+      unit,
+      0 as tez
+    );
+  Test.log(status);
+  Test.log("MITM contract has balance : ");
+  Test.log(Test.get_balance(origMITM.addr));
+  //we test that we hacked it
+
+  assert_with_error(
+    match(status) {
+      when (Success(_)):
+        true
+      when (Fail(tee)):
+        do { Test.log("Error catched !"); Test.log(tee); return false; }
+    },
+    "You are not the admin to do this action"
+  );
+  assert_with_error(
+    Test.get_balance(origMITM.addr) > 0mutez,
+    "Balance is still 0"
+  );
+  Test.log("Sucessfully hacked the victim and grab it money !!!")
+};
+
+// TESTS //
+
+const testCall = _call();
