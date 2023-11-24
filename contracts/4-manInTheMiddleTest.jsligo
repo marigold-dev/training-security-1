@@ -61,7 +61,7 @@ export const _call = (): unit => {
     Test.get_balance(origMITM.addr) > 0mutez,
     "Balance is still 0"
   );
-  Test.log("Sucessfully hacked the victim and grab it money !!!")
+  Test.log("Successfully hacked the victim and grab it money !!!")
 };
 
 // TESTS //

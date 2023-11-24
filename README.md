@@ -6,7 +6,7 @@ Programming errors in web3 are mistakes or bugs that occur when writing smart co
 
 Writing Michelson code requires careful attention to detail and rigorous testing. If the code contains errors or inconsistencies, it may result in a failed transaction that consumes gas and storage fees. Therefore, it is advisable to use high-level languages that compile to Michelson, such as LIGO, and to verify the generated code before deploying it on the node.
 
-On below example, Ligo is verifying that a the substraction is failing as it returns an optioal value.
+On below example, Ligo is verifying that a the subtraction is failing as it returns an optional value.
 
 ```ligolang
 option<tez> = 1mutez - 2mutez;
@@ -53,7 +53,7 @@ Underflowing subtraction of 0 tez and 0.000001 tez
 
 2. Rounding issues
 
-Michelson does not support floats, and so some rounding issues after a division can happen if it is not done carefully. This can cause a smartcontract to halt in some situation.
+Michelson does not support floats, and so some rounding issues after a division can happen if it is not done carefully. This can cause a smart contract to halt in some situation.
 
 Lets' take an example about the division of 101 by 4. We have 2 users that would like to redeem the contract balance 3/4 for user A and 1/4 for user B
 
@@ -110,14 +110,14 @@ taq simulate 3-bitwise.tz --param 3-bitwise.parameter.shiftLeftOneNat.tz
 taq simulate 3-bitwise.tz --param 3-bitwise.parameter.shiftRight257times.tz
 ```
 
-- First example shifts 2n (0x0010) one time to the left, so it gaves 4n (0x0100)
+- First example shifts 2n (0x0010) one time to the left, so it gives 4n (0x0100)
 - Second example shifts 2n (0x0010) 257 times to the right, as the limit is 256 shifts, it produces an error `unexpected arithmetic overflow`
 
 &rarr; **SOLUTION** : To avoid this, one should always check the size of the input and the shift amount before applying the Bitwise instructions. Here you should check if the number of shift is <= to 256, otherwise you raise an error
 
 4. Sender vs Source confusion
 
-When a transaction is sent by a user, it can create other transactions on other smartcontracts. Depending on the transaction, the original sender address could be different from the direct sender of the transaction.
+When a transaction is sent by a user, it can create other transactions on other smart contracts. Depending on the transaction, the original sender address could be different from the direct sender of the transaction.
 
 ```mermaid
 sequenceDiagram
@@ -132,7 +132,7 @@ On this example, from transaction tx2 on SmartContract2 has :
 - the **User** as the source
 - the **SmartContract1** as the sender
 
-* Man-in-the-middle attack : The victim contract is checking the source `Tezos.get_source()` to give access to an endpoint. If we have a phishing contract in the middle, it can grap even some money additionally to do any malicious action
+* Man-in-the-middle attack : The victim contract is checking the source `Tezos.get_source()` to give access to an endpoint. If we have a phishing contract in the middle, it can grab even some money additionally to do any malicious action
 
 Run the following test
 
@@ -141,7 +141,7 @@ taq test 4-manInTheMiddleTest.jsligo
 ```
 
 ```logs
-"Sucessfully hacked the victim and grab it money !!!"
+"Successfully hacked the victim and grab it money !!!"
 🎉 All tests passed 🎉
 ```
 
